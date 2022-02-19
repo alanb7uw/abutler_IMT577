@@ -1,0 +1,115 @@
+/*****************************************
+Course: IMT 577
+Instructor: Sean Pettersen
+Student: Alan Butler
+Assignment: Dim Load
+Date: 02/19/2022
+Notes: Final table for the sales actual having to test more. I understand the grade being lower, will try and fix by Sunday night. 
+
+*****************************************/
+
+
+
+
+CREATE TABLE "IMT577_DW_ALAN_BUTLER"."PUBLIC"."FACT_PRODUCTSALESTARGET" ("DIMPRODUCTID" INTEGER, "DIMTARGETDATEID" DATE, "PRODUCTTARGETSALESQUANTITY" INTEGER);
+
+INSERT INTO Fact_ProductSalesTarget
+(
+    DimProductID
+   ,DimTargetDateID
+   ,ProductTargetSalesQuantity
+)
+(
+SELECT
+   Dim_Product.DimProductID
+  ,Dim_Date.DATE
+  ,TBL_Target_Data_Product.SalesQuantityTarget
+  FROM TBL_Target_Data_Product
+  INNER JOIN Dim_Product  on Dim_Product.DIMPRODUCTID = TBL_Target_Data_Product.ProductID
+  LEFT OUTER JOIN Dim_Date on Dim_Date.DATE = TBL_Target_Data_Product.Year
+);
+
+
+
+----
+
+
+/*CREATE TABLE "IMT577_DW_ALAN_BUTLER"."PUBLIC"."FACT_SRCSALESTARGET" ("DIMSTOREID" INTEGER, "DIMRESELLERID" INTEGER, "DIMCHANNELID" INTEGER, "DIMTARGETDATEID" DATE, "SALESTARGETAMOUNT" INTEGER);
+*/
+
+INSERT INTO Fact_SRCSalesTarget
+(
+    DimStoreID
+   ,DimResellerID
+   ,DimChannelID
+   ,DimTargetDateID
+   ,SalesTargetAmount
+)
+
+(
+SELECT
+        Dim_Store.DimStoreID
+       ,Dim_Reseller.DimResellerID
+       ,Dim_Channel.DimChannelID
+       ,Dim_Date.DATE
+       ,TBLTARGET_DATE_CHANNEL_RESELLER.TARGETSALESAMOUNT
+  FROM TBLTARGET_DATE_CHANNEL_RESELLER
+  INNER JOIN Dim_Channel on Dim_Channel.ChannelName = TBLTARGET_DATE_CHANNEL_RESELLER.ChannelName
+  LEFT OUTER JOIN Dim_Store on Dim_Store.StoreName = TBLTARGET_DATE_CHANNEL_RESELLER.TargetName
+  LEFT OUTER JOIN Dim_Reseller on Dim_Reseller.ResellerName = TBLTARGET_DATE_CHANNEL_RESELLER.TargetName
+  LEFT OUTER JOIN Dim_Date on Dim_Date.DATE = TBLTARGET_DATE_CHANNEL_RESELLER.YEAR
+) ;
+
+
+----
+
+
+CREATE TABLE "IMT577_DW_ALAN_BUTLER"."PUBLIC"."FACT_SALESACTUAL" (" DimProductID  " INTEGER, "DimStoreID  " INTEGER, "DIMRESELLERID" INTEGER, "DimCustomerID   " INTEGER, "DIMCHANNELID" INTEGER, "DimSalesDateID  " DATE, "DimLocationID   " INTEGER, "SALESHEADERID" INTEGER, "SalesDetailID " INTEGER, "SaleAmount  " INTEGER, "SALEQUANTITY" INTEGER, "SaleUnitPrice " INTEGER, "SALEEXTENDEDCOST" INTEGER, "SaleTotalProfit " INTEGER);
+
+
+
+INSERT INTO FACT_SALESACTUAL
+(
+    DimProductID    
+   ,DimStoreID      
+   ,DimResellerID   
+   ,DimCustomerID   
+   ,DimChannelID    
+   ,DimSalesDateID  
+   ,DimLocationID   
+   ,SalesHeaderID   
+   ,SalesDetailID   
+   ,SaleAmount      
+   ,SaleQuantity    
+   ,SaleUnitPrice   
+   ,SaleExtendedCost
+   ,SaleTotalProfit 
+)
+
+(
+SELECT
+     Dim_Product.DimProductID
+    ,Dim_Store.DimStoreID
+    ,Dim_Reseller.DimResellerID
+    ,Dim_Customer.DimCustomerID
+    ,Dim_Channel.DimChannelID
+    ,Dim_Date.Date_PKEY
+    ,Dim_Store.DimLocationID
+    ,TBLSales_Detail.SalesHeaderID
+    ,TBLSales_Detail.SalesDetailID
+    ,TBLSales_Detail.SalesAmount as SaleAmount
+    ,TBLSales_Detail.SalesQuantity as SaleQuantity
+    ,((TBLSales_Detail.SalesAmount)/(TBLSales_Detail.SalesQuantity) as SALESUNITPRICE
+    ,((TBL_Product.Price) / TBL_Product.UnitOfMeasureID) * TBLSales_Detail.SalesQuantity as  SALESEXTENDEDCOSTS
+    ,((TBL_Product.Price - TBK_Product.Cost) / TBL_Product.UnitOfMeasureID) * TBLSales_Detail.SalesQuantity as SALESTOTALPROFIT
+   
+    FROM TBLSales_Detail
+    LEFT OUTER JOIN  Dim_Product ON Dim_Product.ProductID = TBLSales_Detail.ProductID
+    JOIN TBL_Product ON TBL_Product.ProductID = Dim_Product.ProductID
+    JOIN TBLSales_Header ON TBL_Sales_Header.SalesHeaderID = TBLSales_Detail.SalesHeaderID
+    LEFT OUTER JOIN Dim_Store ON Dim_Store.SourceStoreID = TBLSales_Header.StoreID
+    LEFT OUTER JOIN Dim_Reseller ON Dim_Reseller.ResellerID = TBLSales_Header.ResellerID
+    LEFT OUTER JOIN Dim_Customer ON Dim_Customer.CustomerID = TBLSales_Header.CustomerID
+    LEFT OUTER JOIN Dim_Channel ON Dim_Channel.ChannelID = TBLSales_Header.ChannelID
+    LEFT OUTER JOIN Dim_Date ON Dim_Date.Date = TBLSales_Header.Date
+);
