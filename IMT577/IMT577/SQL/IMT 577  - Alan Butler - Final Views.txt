@@ -1,0 +1,297 @@
+/*****************************************
+Course: IMT 577
+Instructor: Sean Pettersen
+Student: Alan Butler
+Assignment: Dim Load
+Date: 02/27/2022
+Notes: Location views needs to be cleaned up. Intent is to port the cities with the highest sales versus target into a map in Tab, and use to build recommendation for opening or closing stores. 
+
+*****************************************/
+
+
+
+--DIMENSION TABLE VIEWS
+CREATE VIEW CHANNEL 
+AS 
+SELECT
+DIMCHANNELID,
+CHANNELID,
+CHANNELCATEGORYID,
+CHANNELNAME,
+CHANNELCATEGORY
+
+FROM
+DIM_CHANNEL;
+
+--
+
+CREATE VIEW CUSTOMER
+AS
+SELECT
+DIMCUSTOMERID,
+DIMLOCATIONID,
+CUSTOMERID,
+CUSTOMERFULLNAME,
+CUSTOMERFIRSTNAME,
+CUSTOMERLASTNAME,
+CUSTOMERGENDER
+
+FROM
+DIM_CUSTOMER
+
+---
+
+CREATE VIEW DATE
+DATE_PKEY,
+DATE,
+FULL_DATE_DESC,
+DAY_NUM_IN_WEEK,
+DAY_NUM_IN_YEAR,
+DAY_NAME,
+DAY_ABBREV,
+WEEKDAY_IND,
+US_HOLIDAY_IND,
+HOLIDAY_IND,
+MONTH_END_IND,
+WEEK_BEGIN_DATE_NKEY,
+WEEK_END_DATE_NKEY,
+WEEK_END_DATE,
+WEEK_NUM_IN_YEAR,
+MONTH_NAME,
+MONTH_ABBREV,
+MONTH_NUM_IN_YEAR,
+YEARMONTH,
+QUARTER,
+YEARQUARTER,
+YEAR,
+FISCAL_WEEK_NUM,
+FISCAL_MONTH_NUM,
+FISCAL_YEARMONTH,
+FISCAL_QUARTER
+FISCAL_YEARQUARTER,
+FISCAL_HALFYEAR,
+SQL_TIMESTAMP,
+CURRENT_ROW_IND,
+EFFECTIVE_DATE,
+EXPIRATION_DATE
+
+FROM 
+DIM_DATE;
+--
+
+CREATE VIEW LOCATION
+AS
+SELECT
+DIMLOCATIONID,
+ADDRESS,
+CITY,
+POSTALCODE,
+STATE_PROVINCE,
+COUNTRY
+FROM
+DIM_LOCATION
+
+--
+
+CREATE VIEW PRODUCT
+AS
+SELECT
+DimProductID,
+ProductID,
+ProductTypeID,
+ProductCategoryID,
+ProductName,
+ProductType,
+ProductCategory,
+ProductRetailPrice,
+ProductWholesalePrice,
+ProductCost,
+ProductRetailProfit,
+ProductWholesaleUnitProfit,
+ProductProfitMarginUnitPercent
+FROM
+DIM_PRODUCT
+
+--
+
+CREATE VIEW RESELLER
+AS
+SELECT
+DimResellerID,
+DimLocationID,
+ResellerID,
+ResellerName,
+ContactName,
+PhoneNumber,
+Email
+FROM 
+DIM_RESELLER
+
+-- 
+
+CREATE VIEW STORE
+AS
+SELECT
+DimStoreID,
+DimLocationID,
+SourceStoreID,
+StoreName,
+StoreNumber,
+StoreManager
+FROM
+DIM_STORE
+
+--
+
+CREATE VIEW DATE
+AS
+SELECT
+     DATE_PKEY,
+		DATE,
+        FULL_DATE_DESC,
+		DAY_NUM_IN_WEEK,
+		DAY_NUM_IN_MONTH,
+		DAY_NUM_IN_YEAR,
+		DAY_NAME,
+		DAY_ABBREV,
+		WEEKDAY_IND,
+		US_HOLIDAY_IND,
+        _HOLIDAY_IND,
+		MONTH_END_IND,
+		WEEK_BEGIN_DATE_NKEY,
+		WEEK_BEGIN_DATE,
+		WEEK_END_DATE_NKEY,
+		WEEK_END_DATE,
+		WEEK_NUM_IN_YEAR,
+		MONTH_NAME,
+		MONTH_ABBREV,
+		MONTH_NUM_IN_YEAR,
+		YEARMONTH,
+		QUARTER,
+		YEARQUARTER,
+		YEAR,
+		FISCAL_WEEK_NUM,
+		FISCAL_MONTH_NUM,
+		FISCAL_YEARMONTH,
+		FISCAL_QUARTER,
+		FISCAL_YEARQUARTER,
+		FISCAL_HALFYEAR,
+		FISCAL_YEAR,
+		SQL_TIMESTAMP,
+		CURRENT_ROW_IND,
+		EFFECTIVE_DATE,
+		EXPIRATION_DATE
+
+FROM
+    DIM_Date;
+
+
+
+-- FACT TABLE VIEWS
+
+CREATE VIEW FACTPRODUCTSALESTARGET
+AS
+SELECT
+DimProductID,
+DimTargetDateID,
+ProductTargetSalesQuantity
+FROM 
+Fact_ProductSalesTarget
+
+--
+
+CREATE VIEW FACTSRCSALESTARGET
+AS
+SELECT
+DimStoreID
+DimResellerID,
+DimChannelID,
+DimTargetDateID,
+SalesTargetAmount
+FROM
+Fact_SRCSalesTarget
+
+--
+
+CREATE VIEW FACTSALESACTUAL
+AS
+SELECT
+DimProductID
+DimStoreID,
+DimResellerID,
+DimCustomerID,
+DimChannelID,
+DimSaleDateID,
+DimLocationID,
+SalesHeaderID,
+SalesDetailID,
+SaleAmount,
+SaleQuantity,
+SaleUnitPrice,
+SaleExtendedCost,
+SaleTotalProfit
+FROM
+FACT_SALESACTUAL
+
+
+---
+
+Create View Store_Profit 
+AS
+Select
+Dim_Store.StoreNumber,
+SUM(Fact_SalesActual.SaleTotalProfit) AS TotalProfits
+
+FROM Dim_Store 
+JOIN Fact_SalesActual ON Dim_Store.DimStoreID = Fact_SalesActual.DimStoreID
+WHERE Dim_Store.StoreNumber = 10 OR Dim_Store.StoreNumber = 21
+GROUP BY Dim_Store.StoreNumber
+ORDER BY TotalProfits
+
+select * from Store_Profit
+
+---
+
+CREATE VIEW STORE_TARGET_SALES_ACTUAL
+AS
+SELECT 
+Dim_Store.DimStoreID,
+Dim_Store.StoreNumber,
+Fact_SRCSalesTarget.SalesTargetAmount,
+SUM(FACT_SALESACTUAL.SaleAmount) AS ACTUALSALES,
+Fact_SRCSalesTarget.DimTargetDateID
+
+
+FROM DIM_Store
+JOIN FACT_SRCSALESTARGET ON Dim_Store.DimStoreID = FACT_SRCSALESTARGET.DimStoreID
+JOIN FACT_SALESACTUAL ON Dim_Store.DimStoreID = Fact_SalesActual.DimStoreID
+JOIN Dim_Date ON Fact_SalesActual.DIMSALEDATEID = Dim_Date.Date_Pkey
+WHERE Dim_Store.DimStoreID = 4 OR 6
+AND Dim_Date.Year = 2013 OR 2014
+GROUP BY Dim_Store.DimStoreID, Dim_Store.StoreNumber, Fact_SRCSalesTarget.SalesTargetAmount, Fact_SRCSalesTarget.DimTargetDateID
+ORDER BY ACTUALSALES;
+
+
+
+--
+CREATE VIEW SALES_LOCATION
+AS
+
+SELECT 
+Dim_Store.DimStoreID,
+Dim_Store.StoreNumber,
+Fact_SRCSalesTarget.SalesTargetAmount,
+SUM(FACT_SALESACTUAL.SaleAmount) AS ACTUALSALES,
+Fact_SRCSalesTarget.DimTargetDateID,
+DIM_LOCATION.CITY
+
+
+FROM DIM_Store
+JOIN FACT_SRCSALESTARGET ON Dim_Store.DimStoreID = FACT_SRCSALESTARGET.DimStoreID
+JOIN FACT_SALESACTUAL ON Dim_Store.DimStoreID = Fact_SalesActual.DimStoreID
+JOIN Dim_Date ON Fact_SalesActual.DIMSALEDATEID = Dim_Date.Date_Pkey
+JOIN DIM_LOCATION ON DIM_LOCATION.DIMLOCATIONID = FACT_SALESACTUAL.DIMLOCATIONID
+WHERE Dim_Store.DimStoreID = 4 OR 6
+AND Dim_Date.Year = 2013 OR 2014
+GROUP BY Dim_Store.DimStoreID, Dim_Store.StoreNumber, Fact_SRCSalesTarget.SalesTargetAmount, Fact_SRCSalesTarget.DimTargetDateID, DIM_LOCATION.CITY
+ORDER BY DIM_LOCATION.CITY;
